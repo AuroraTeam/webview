@@ -45,8 +45,6 @@ jobs:
         with:
           node-version: 22
           cache: yarn
-      - name: Enable Corepack
-        run: corepack enable
       - name: Install
         uses: dtolnay/rust-toolchain@stable
         if: ${{ !matrix.settings.docker }}
@@ -76,6 +74,11 @@ jobs:
         run: yarn config set supportedArchitectures.cpu "ia32"
         shell: bash
       - name: Install dependencies
+        if: matrix.settings.host == 'ubuntu-latest'
+        run: |
+          sudo apt update
+          sudo apt install -y libgtk-3-dev libwebkit2gtk-4.1-dev
+      - name: Install dependencies
         run: yarn install
       - name: Setup node x86
         uses: actions/setup-node@v4
@@ -84,8 +87,6 @@ jobs:
           node-version: 22
           cache: yarn
           architecture: x86
-      - name: Enable Corepack
-        run: corepack enable
       - name: Build in docker
         uses: addnab/docker-run-action@v3
         if: ${{ matrix.settings.docker }}
@@ -126,8 +127,6 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: yarn
           architecture: x64
-      - name: Enable Corepack
-        run: corepack enable
       - name: Install dependencies
         run: yarn install
       - name: Download artifacts
@@ -157,8 +156,6 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: yarn
-      - name: Enable Corepack
-        run: corepack enable
       - name: Install dependencies
         run: yarn install
       - name: Download artifacts
@@ -184,8 +181,6 @@ jobs:
         with:
           node-version: 22
           cache: yarn
-      - name: Enable Corepack
-        run: corepack enable
       - name: Install dependencies
         run: yarn install
       - name: Download all artifacts
