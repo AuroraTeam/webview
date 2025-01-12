@@ -10,7 +10,7 @@ on:
   push:
     branches:
       - main
-      - next
+      - testing
     tags-ignore:
       - "**"
     paths-ignore:
@@ -159,17 +159,14 @@ jobs:
         run: |
           npm config set provenance true
           echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> ~/.npmrc
-          echo ${{ github.ref_name }}
-          if ${{ github.ref_name }} == "main";
-          then
+          if [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
+            echo "On main branch, publishing with public access..."
             # npm publish --access public
-            echo "Published main"
-          elif ${{ github.ref_name }} == "next";
-          then
+          elif [[ "${GITHUB_REF}" == "refs/heads/next" ]]; then
+            echo "On next branch, publishing with 'next' tag..."
             # npm publish --tag next --access public
-            echo "Published next"
           else
-            echo "Not a release, skipping publish"
+            echo "Not on a release branch, skipping publish"
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
