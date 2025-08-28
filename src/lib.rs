@@ -5,7 +5,8 @@ extern crate napi_derive;
 
 use std::path::PathBuf;
 
-use wry::{webview_version, WebContext, WebView};
+use napi::{Env, JsFunction};
+use wry::{http::request, webview_version, WebContext, WebView, WebViewAttributes};
 
 use tao::{
   dpi::LogicalSize,
@@ -16,7 +17,7 @@ use tao::{
 use wry::WebViewBuilder;
 
 #[napi(object)]
-pub struct WindowConstructor {
+pub struct WindowOptions {
   /* Test */
   pub app_name: Option<String>,
   // Pos
@@ -35,11 +36,12 @@ pub struct WindowConstructor {
   pub icon: Option<String>,
   pub show: Option<bool>,
   pub frame: Option<bool>,
+  pub devtools: Option<bool>,
 }
 
-impl Default for WindowConstructor {
+impl Default for WindowOptions {
   fn default() -> Self {
-    WindowConstructor {
+    WindowOptions {
       app_name: Some("Glacier App".to_string()),
       x: None,
       y: None,
@@ -54,31 +56,32 @@ impl Default for WindowConstructor {
       icon: None,
       show: None,
       frame: None,
+      devtools: None,
     }
   }
 }
 
 #[napi]
 pub struct Window {
-  options: WindowConstructor,
+  options: WindowOptions,
 
   url: Option<String>,
   html: Option<String>,
 
   window: Option<TaoWindow>,
-  webwiew: Option<WebView>,
+  webview: Option<WebView>,
 }
 
 #[napi]
 impl Window {
   #[napi(constructor)]
-  pub fn new(options: Option<WindowConstructor>) -> Self {
+  pub fn new(options: Option<WindowOptions>) -> Self {
     Window {
       options: options.unwrap_or_default(),
       url: None,
       html: None,
       window: None,
-      webwiew: None,
+      webview: None,
     }
   }
 
@@ -89,7 +92,7 @@ impl Window {
 
   #[napi]
   pub fn load_url(&mut self, url: String) {
-    match &self.webwiew {
+    match &self.webview {
       None => self.url = Some(url.clone()),
       Some(ww) => ww.load_url(url.as_str()).unwrap(),
     }
@@ -97,15 +100,16 @@ impl Window {
 
   #[napi]
   pub fn load_html(&mut self, url: String) {
-    match &self.webwiew {
+    match &self.webview {
       None => self.html = Some(url.clone()),
       Some(ww) => ww.load_html(url.as_str()).unwrap(),
     }
   }
 
-  #[napi]
-  pub fn create(&mut self) {
+  #[napi(ts_args_type = "ipcHandler: (data: string) => void")]
+  pub fn create(&mut self, env: Env, callback: JsFunction) {
     let event_loop = EventLoop::new();
+
     self.window = Some(
       WindowBuilder::new()
         .with_title(self.get_title())
@@ -117,13 +121,27 @@ impl Window {
     let path = PathBuf::from(&self.get_web_context_dir());
     let mut web_context = WebContext::new(Some(path));
 
-    let mut webview = WebViewBuilder::with_web_context(&mut web_context);
-    if let Some(url) = &self.url {
-      webview = webview.with_url(url);
-    } else if let Some(html) = &self.html {
-      webview = webview.with_html(html);
-    }
-    self.webwiew = Some(webview.build(self.window.as_ref().unwrap()).unwrap());
+    let ipc_handler = move |request: request::Request<String>| {
+      callback
+        .call(None, &[env.create_string(request.body()).unwrap()])
+        .ok();
+      ()
+    };
+
+    let webview_attributes: WebViewAttributes = WebViewAttributes {
+      url: self.url.clone(),
+      html: self.html.clone(),
+      context: Some(&mut web_context),
+      devtools: self.get_devtools(),
+      ipc_handler: Some(Box::new(ipc_handler)),
+      ..Default::default()
+    };
+
+    self.webview = Some(
+      WebViewBuilder::with_attributes(webview_attributes)
+        .build(self.window.as_ref().unwrap())
+        .unwrap(),
+    );
 
     event_loop.run(move |event, _, control_flow| {
       *control_flow = ControlFlow::Wait;
@@ -136,12 +154,17 @@ impl Window {
         } => *control_flow = ControlFlow::Exit,
         _ => (),
       }
-    });
+    })
   }
 
   #[napi]
   pub fn get_webview_version() -> String {
     webview_version().unwrap()
+  }
+
+  #[napi]
+  pub fn get_lib_version() -> String {
+    env!("CARGO_PKG_VERSION").to_string()
   }
 
   fn get_app_name(&self) -> String {
@@ -162,5 +185,9 @@ impl Window {
 
   fn get_web_context_dir(&self) -> String {
     return std::env::temp_dir().to_str().unwrap().to_string() + self.get_app_name().as_str();
+  }
+
+  fn get_devtools(&self) -> bool {
+    self.options.devtools.unwrap_or_default()
   }
 }
