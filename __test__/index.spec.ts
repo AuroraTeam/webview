@@ -1,6 +1,6 @@
 import test from 'ava'
 
-import { Window } from '../index.js'
+import { Window } from '../index'
 
 test('Window is a function', (t) => {
   t.is(typeof Window, 'function')

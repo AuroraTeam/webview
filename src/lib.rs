@@ -123,7 +123,6 @@ impl Window {
 
     let ipc_handler = move |request: request::Request<String>| {
       callback.call(request.body().to_string()).unwrap();
-      ()
     };
 
     let webview_attributes = WebViewAttributes {
@@ -182,7 +181,7 @@ impl Window {
   }
 
   fn get_web_context_dir(&self) -> String {
-    return std::env::temp_dir().to_str().unwrap().to_string() + self.get_app_name().as_str();
+    std::env::temp_dir().to_str().unwrap().to_string() + self.get_app_name().as_str()
   }
 
   fn get_devtools(&self) -> bool {
