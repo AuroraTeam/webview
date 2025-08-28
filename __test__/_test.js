@@ -1,9 +1,9 @@
-const { Window } = require("../index.js");
+import { Window } from '../index.js'
 
 const window = new Window({
   devtools: true,
-});
-window.setTitle("Glacier App");
+})
+window.setTitle('Glacier App')
 
 const code = `
 <html>
@@ -19,11 +19,11 @@ const code = `
         </script>
     </body>
 </html>
-`;
-window.loadHtml(code);
+`
+window.loadHtml(code)
 
 function ipcHandler(data) {
-  console.log(`IPC data: ${data}`);
+  console.log(`IPC data: ${data}`)
 }
 
-window.create(ipcHandler);
+window.create(ipcHandler)

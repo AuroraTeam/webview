@@ -5,7 +5,7 @@ extern crate napi_derive;
 
 use std::path::PathBuf;
 
-use napi::{Env, JsFunction};
+use napi::bindgen_prelude::Function;
 use wry::{http::request, webview_version, WebContext, WebView, WebViewAttributes};
 
 use tao::{
@@ -106,8 +106,8 @@ impl Window {
     }
   }
 
-  #[napi(ts_args_type = "ipcHandler: (data: string) => void")]
-  pub fn create(&mut self, env: Env, callback: JsFunction) {
+  #[napi]
+  pub fn create(&mut self, callback: Function<'static, String>) {
     let event_loop = EventLoop::new();
 
     self.window = Some(
@@ -122,13 +122,11 @@ impl Window {
     let mut web_context = WebContext::new(Some(path));
 
     let ipc_handler = move |request: request::Request<String>| {
-      callback
-        .call(None, &[env.create_string(request.body()).unwrap()])
-        .ok();
+      callback.call(request.body().to_string()).unwrap();
       ()
     };
 
-    let webview_attributes: WebViewAttributes = WebViewAttributes {
+    let webview_attributes = WebViewAttributes {
       url: self.url.clone(),
       html: self.html.clone(),
       context: Some(&mut web_context),
@@ -138,7 +136,7 @@ impl Window {
     };
 
     self.webview = Some(
-      WebViewBuilder::with_attributes(webview_attributes)
+      WebViewBuilder::new_with_attributes(webview_attributes)
         .build(self.window.as_ref().unwrap())
         .unwrap(),
     );
