@@ -3,7 +3,7 @@
 authors = ["JCat <to@jocat.ru>"]
 edition = "2021"
 name    = "webview"
-version = "0.3.0"
+version = "0.4.0"
 
 [lib]
 crate-type = ["cdylib"]
